@@ -1,0 +1,24 @@
+# Môi trường ảo (Virtual Environment) - BẮT BUỘC bỏ qua vì quá nặng và không tương thích đa nền tảng
+venv/
+env/
+ENV/
+.env
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# ChromaDB Local (Nên để người dùng tự chạy ingest_local.py tạo lại sạch sẽ trên máy họ)
+chroma_db_local/
+
+# VS Code & IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Hệ điều hành
+.DS_Store
+Thumbs.db

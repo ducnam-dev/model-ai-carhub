@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Showroom Ô Tô AI</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            background: #f4f6f9;
+        }
+
+        .hero {
+            padding: 60px;
+            text-align: center;
+            background: #1e293b;
+            color: white;
+        }
+
+        /* Khung Chat Widget */
+        .chat-widget {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 380px;
+            height: 560px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+
+        .chat-header {
+            background: #2563eb;
+            color: white;
+            padding: 16px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .chat-body {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+
+            background: #f8fafc;
+
+        }
+
+        .msg {
+            max-width: 82%;
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .msg.user {
+            align-self: flex-end;
+            background: #2563eb;
+            color: white;
+            border-bottom-right-radius: 2px;
+        }
+
+        .msg.bot {
+            align-self: flex-start;
+            background: white;
+            color: #1e293b;
+            border: 1px solid #e2e8f0;
+            border-bottom-left-radius: 2px;
+        }
+
+        /* Thẻ hiển thị QR Đặt Cọc */
+        .qr-card {
+            align-self: flex-start;
+            background: white;
+            border: 2px solid #2563eb;
+            border-radius: 12px;
+            padding: 12px;
+            width: 85%;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);
+        }
+
+        .qr-card img {
+            width: 100%;
+            max-width: 230px;
+            border-radius: 8px;
+            margin: 8px 0;
+        }
+
+        .qr-btn {
+            background: #16a34a;
+            color: white;
+            border: none;
+            padding: 10px 14px;
+            width: 100%;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .qr-btn:hover {
+            background: #15803d;
+        }
+
+        .success-banner {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 13.5px;
+            font-weight: 600;
+            text-align: center;
+        }
+
+        .chat-footer {
+            display: flex;
+            padding: 12px;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+            gap: 8px;
+        }
+
+        .chat-footer input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        .chat-footer button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 0 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="hero">
+        <h1>SHOWROOM Ô TÔ THÔNG MINH</h1>
+        <p>Tích hợp Trợ lý AI Local: Tư vấn thông số - Đặt lịch lái thử - Đặt cọc VietQR</p>
+    </div>
+
+    <div class="chat-widget">
+        <div class="chat-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>🤖 Trợ lý Showroom AI (Local)</span>
+            <button type="button" onclick="resetChat()" title="Bắt đầu đoạn chat mới" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 8px; border-radius: 6px; font-size: 11px; cursor: pointer;">🔄 Bắt đầu lại</button>
+        </div>
+        <div class="chat-body" id="chatBody">
+            <div class="msg bot">Xin chào! Em là trợ lý AI của Showroom. Anh/chị cần tư vấn dòng xe nào (Toyota Vios, VinFast VF 7, Mazda CX-5), đặt lịch lái thử hay đặt cọc giữ xe ạ?</div>
+        </div>
+        <div class="chat-footer">
+            <input type="text" id="userInput" placeholder="Nhập tin nhắn..."
+                onkeydown="if(event.key==='Enter') { event.preventDefault(); sendMessage(); }" />
+            <button type="button" onclick="sendMessage()">Gửi</button>
+        </div>
+    </div>
+
+    <script>
+        const SESSION_STORAGE_KEY = "showroom_session_id";
+        const CHAT_STORAGE_KEY = "showroom_chat_history";
+
+        // Khôi phục sessionId và lịch sử hội thoại nếu trang bị reload/refresh
+        let sessionId = sessionStorage.getItem(SESSION_STORAGE_KEY);
+        if (!sessionId) {
+            sessionId = "khach_" + Math.floor(Math.random() * 100000);
+            sessionStorage.setItem(SESSION_STORAGE_KEY, sessionId);
+        }
+
+        const chatBody = document.getElementById("chatBody");
+        const userInput = document.getElementById("userInput");
+
+        const savedHistory = sessionStorage.getItem(CHAT_STORAGE_KEY);
+        if (savedHistory && savedHistory.trim().length > 0) {
+            chatBody.innerHTML = savedHistory;
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        function saveChatHistory() {
+            sessionStorage.setItem(CHAT_STORAGE_KEY, chatBody.innerHTML);
+            sessionStorage.setItem(SESSION_STORAGE_KEY, sessionId);
+        }
+
+        function resetChat() {
+            sessionId = "khach_" + Math.floor(Math.random() * 100000);
+            sessionStorage.setItem(SESSION_STORAGE_KEY, sessionId);
+            sessionStorage.removeItem(CHAT_STORAGE_KEY);
+            chatBody.innerHTML = `
+                <div class="msg bot">Xin chào! Em là trợ lý AI của Showroom. Anh/chị cần tư vấn dòng xe nào (Toyota Vios, VinFast VF 7, Mazda CX-5), đặt lịch lái thử hay đặt cọc giữ xe ạ?</div>
+            `;
+            if (typeof pollInterval !== "undefined" && pollInterval) {
+                clearInterval(pollInterval);
+            }
+        }
+
+        function appendMessage(text, sender) {
+            const div = document.createElement("div");
+            div.className = `msg ${sender}`;
+            div.innerText = text;
+            chatBody.appendChild(div);
+            chatBody.scrollTop = chatBody.scrollHeight;
+            saveChatHistory();
+            return div;
+        }
+
+        async function sendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            appendMessage(text, "user");
+            userInput.value = "";
+            const loadingMsg = appendMessage("Đang xử lý...", "bot");
+
+            try {
+                const res = await fetch("http://127.0.0.1:8000/api/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ session_id: sessionId, message: text })
+                });
+                const data = await res.json();
+                loadingMsg.innerText = data.reply;
+                saveChatHistory();
+
+                // Nếu AI kích hoạt tính năng Đặt cọc -> Hiển thị mã QR ngay trong khung chat
+                if (data.actions && Array.isArray(data.actions)) {
+                    data.actions.forEach(act => {
+                        if (act && act.type === "SHOW_QR") renderQRBox(act);
+                    });
+                } else if (data.action && data.action.type === "SHOW_QR") {
+                    renderQRBox(data.action);
+                }
+            } catch (err) {
+                loadingMsg.innerText = "Lỗi kết nối tới Server AI Local (Hãy chắc chắn bạn đã chạy uvicorn).";
+                saveChatHistory();
+            }
+        }
+
+        function renderQRBox(qrData) {
+            const qrDiv = document.createElement("div");
+            qrDiv.className = "qr-card";
+            qrDiv.id = "qr_box_" + qrData.order_id;
+            qrDiv.innerHTML = `
+        <div style="font-weight:bold; color:#1e40af;">MÃ QR ĐẶT CỌC XE</div>
+        <div style="font-size:12px; color:#475569; margin-top:4px;">Mã đơn: <b>${qrData.order_id}</b> | Số tiền: <b>${qrData.amount.toLocaleString()} đ</b></div>
+        <img src="${qrData.qr_url}" alt="VietQR Đặt cọc" />
+        <button type="button" class="qr-btn" onclick="confirmQRPayment('${qrData.order_id}')">
+          ✅ Xác nhận đã quét QR chuyển khoản
+        </button>
+      `;
+            chatBody.appendChild(qrDiv);
+            chatBody.scrollTop = chatBody.scrollHeight;
+            saveChatHistory();
+        }
+
+        async function confirmQRPayment(orderId) {
+            const res = await fetch(`http://127.0.0.1:8000/api/payment-webhook/${orderId}`, {
+                method: "POST"
+            });
+            const data = await res.json();
+
+            if (data.status === "success") {
+                const qrBox = document.getElementById("qr_box_" + orderId);
+                if (qrBox) {
+                    qrBox.outerHTML = `
+              <div class="success-banner">
+                🎉 THANH TOÁN ĐẶT CỌC THÀNH CÔNG!<br/>
+                Mã đơn: <b>${data.order_id}</b> - Khách hàng: <b>${data.customer_name}</b><br/>
+                Xe: <b>${data.car_model}</b> (${data.amount.toLocaleString()} VNĐ).<br/>
+                Showroom đã ghi nhận và sẽ liên hệ giao xe sớm nhất!
+              </div>
+            `;
+                }
+                chatBody.scrollTop = chatBody.scrollHeight;
+                saveChatHistory();
+            }
+        }
+    </script>
+
+</body>
+
+</html>
